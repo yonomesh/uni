@@ -254,3 +254,64 @@ func GetModuleID(instance any) string {
 	}
 	return id
 }
+
+// Provisioner is implemented by modules which may need to perform some additional "setup" steps
+// immediately after being loaded.
+//
+// Provisioning should be fast (imperceptible running time).
+//
+// If any side-effects result in the execution of this function (e.g. creating global state,
+// any other allocations which require garbage collection, opening files, starting goroutines etc.),
+// be sure to clean up properly by implementing the CleanerUpper interface to avoid leaking resources.
+//
+// JSON 配置 → 反序列化成模块结构体 → 调用 Provision() → 模块开始工作
+type Provisioner interface {
+	Provision(Context) error
+}
+
+// Validator is implemented by modules which can verify that their
+// configurations are valid. This method will be called after
+// Provision() (if implemented). Validation should always be fast
+// (imperceptible running time) and an error must be returned if
+// the module's configuration is invalid.
+type Validator interface {
+	Validate() error
+}
+
+// CleanerUpper is implemented by modules which may have side-effects
+// such as opened files, spawned goroutines, or allocated some sort
+// of non-stack state when they were provisioned. This method should
+// deallocate/cleanup those resources to prevent memory leaks. Cleanup
+// should be fast and efficient. Cleanup should work even if Provision
+// returns an error, to allow cleaning up from partial provisionings.
+type CleanerUpper interface {
+	Cleanup() error
+}
+
+// getModuleNameInline loads the string value from raw of moduleNameKey,
+// where raw must be a JSON encoding of a map. It returns that value,
+// along with the result of removing that key from raw.
+func getModuleNameInline(moduleNameKey string, raw json.RawMessage) (string, json.RawMessage, error) {
+	var tmp map[string]any
+	err := json.Unmarshal(raw, &tmp)
+	if err != nil {
+		return "", nil, err
+	}
+
+	moduleName, ok := tmp[moduleNameKey].(string)
+	if !ok || moduleName == "" {
+		return "", nil, fmt.Errorf("module name not specified with key '%s' in %+v", moduleNameKey, tmp)
+	}
+
+	// remove key from the object, otherwise decoding it later
+	// will yield an error because the struct won't recognize it
+	// (this is only needed because we strictly enforce that
+	// all keys are recognized when loading modules)
+	delete(tmp, moduleNameKey)
+	result, err := json.Marshal(tmp)
+	if err != nil {
+		return "", nil, fmt.Errorf("re-encoding module configuration: %v", err)
+	}
+
+	return moduleName, result, nil
+}

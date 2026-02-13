@@ -1,6 +1,7 @@
 package uni
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"slices"
@@ -179,6 +180,7 @@ func TestModuleID_Name(t *testing.T) {
 	}
 }
 
+// func RegisterModule(instance Module)
 func TestRegisterModule(t *testing.T) {
 	modulesMu.Lock()
 	modules = map[string]ModuleInfo{
@@ -281,6 +283,7 @@ func TestRegisterModule(t *testing.T) {
 	}
 }
 
+// func GetModule(name string) (ModuleInfo, error)
 func TestGetModule(t *testing.T) {
 	modulesMu.Lock()
 	modules = map[string]ModuleInfo{
@@ -347,6 +350,7 @@ func TestGetModule(t *testing.T) {
 
 }
 
+// func GetModules(scope string) []ModuleInfo
 func TestGetModules(t *testing.T) {
 	modulesMu.Lock()
 	modules = map[string]ModuleInfo{
@@ -412,6 +416,7 @@ func TestGetModules(t *testing.T) {
 	}
 }
 
+// func GetModuleName(instance any) string
 func TestGetModuleName(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -460,6 +465,7 @@ func TestGetModuleName(t *testing.T) {
 	}
 }
 
+// func GetModuleID(instance any) string
 func TestGetModuleID(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -508,6 +514,7 @@ func TestGetModuleID(t *testing.T) {
 	}
 }
 
+// func Modules() []string
 func TestModules(t *testing.T) {
 	clear(modules)
 	modulesMu.Lock()
@@ -532,5 +539,93 @@ func TestModules(t *testing.T) {
 	fmt.Println(got)
 	if !slices.Equal(want, got) {
 		t.Fatalf("no")
+	}
+}
+
+// func getModuleNameInline(moduleNameKey string, raw json.RawMessage) (string, json.RawMessage, error)
+func TestGetModuleNameInline(t *testing.T) {
+	tests := []struct {
+		name     string
+		key      string
+		raw      string
+		wantName string
+		wantJSON string
+		wantErr  bool
+	}{
+		{
+			name:     "normal case",
+			key:      "handler",
+			raw:      `{"handler":"http","timeout":5}`,
+			wantName: "http",
+			wantJSON: `{"timeout":5}`,
+			wantErr:  false,
+		},
+		{
+			name:    "missing key",
+			key:     "handler",
+			raw:     `{"timeout":5}`,
+			wantErr: true,
+		},
+		{
+			name:    "key not string",
+			key:     "handler",
+			raw:     `{"handler":123}`,
+			wantErr: true,
+		},
+		{
+			name:    "empty string module name",
+			key:     "handler",
+			raw:     `{"handler":""}`,
+			wantErr: true,
+		},
+		{
+			name:    "invalid json",
+			key:     "handler",
+			raw:     `{"handler":`,
+			wantErr: true,
+		},
+		{
+			name:     "only module key",
+			key:      "handler",
+			raw:      `{"handler":"http"}`,
+			wantName: "http",
+			wantJSON: `{}`,
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			name, out, err := getModuleNameInline(tt.key, []byte(tt.raw))
+
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error but got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if name != tt.wantName {
+				t.Fatalf("want name %q but got %q", tt.wantName, name)
+			}
+
+			var gotMap map[string]any
+			var wantMap map[string]any
+
+			if err := json.Unmarshal(out, &gotMap); err != nil {
+				t.Fatalf("unmarshal output json failed: %v", err)
+			}
+			if err := json.Unmarshal([]byte(tt.wantJSON), &wantMap); err != nil {
+				t.Fatalf("unmarshal want json failed: %v", err)
+			}
+
+			if !reflect.DeepEqual(gotMap, wantMap) {
+				t.Fatalf("want json %v but got %v", wantMap, gotMap)
+			}
+		})
 	}
 }
