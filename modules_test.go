@@ -747,3 +747,48 @@ func TestStrictUnmarshalJSON(t *testing.T) {
 		})
 	}
 }
+
+// func isJSONRawMessage(typ reflect.Type) bool
+func TestIsJSONRawMessage(t *testing.T) {
+	type CustomStruct struct{}
+
+	tests := []struct {
+		name     string
+		input    reflect.Type
+		expected bool
+	}{
+		{
+			name:     "json.RawMessage",
+			input:    reflect.TypeFor[json.RawMessage](),
+			expected: true,
+		},
+		{
+			name:     "[]byte",
+			input:    reflect.TypeFor[[]byte](),
+			expected: false,
+		},
+		{
+			name:     "string",
+			input:    reflect.TypeFor[string](),
+			expected: false,
+		},
+		{
+			name:     "struct",
+			input:    reflect.TypeFor[CustomStruct](),
+			expected: false,
+		},
+		{
+			name:     "nil",
+			input:    nil,
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isJSONRawMessage(tt.input); got != tt.expected {
+				t.Errorf("isJSONRawMessage() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -348,4 +349,11 @@ func StrictUnmarshalJSON(data []byte, v any) error {
 		return fmt.Errorf("%w, at offset %d", jsonErr, jsonErr.Offset)
 	}
 	return err
+}
+
+var JSONRawMessageType = reflect.TypeFor[json.RawMessage]()
+
+// isJSONRawMessage returns true if the type is encoding/json.RawMessage.
+func isJSONRawMessage(typ reflect.Type) bool {
+	return typ == JSONRawMessageType
 }
