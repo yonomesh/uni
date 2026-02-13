@@ -14,4 +14,11 @@ import "context"
 // not actually need to do this).
 type Context struct {
 	context.Context
+
+	moduleInstances map[string][]Module
+	// TODO cfg             *Config
+	ancestry     []Module
+	cleanupFuncs []func()                // invoked at every config unload
+	exitFuncs    []func(context.Context) // invoked at config unload ONLY IF the process is exiting (EXPERIMENTAL)
+	// TODO metricsRegistry *prometheus.Registry
 }
