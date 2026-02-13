@@ -691,3 +691,59 @@ func TestParseStructTag(t *testing.T) {
 		})
 	}
 }
+
+// func StrictUnmarshalJSON(data []byte, v any) error
+func TestStrictUnmarshalJSON(t *testing.T) {
+	type Config struct {
+		Name  string `json:"name"`
+		Count int    `json:"count"`
+	}
+
+	tests := []struct {
+		name    string
+		data    string
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "normal",
+			data:    `{"name": "kaze", "count": 10}`,
+			wantErr: false,
+		},
+		{
+			name:    "包含未知字段 (严格模式应报错)",
+			data:    `{"name": "kaze", "unknown": "value"}`,
+			wantErr: true,
+			errMsg:  "unknown field",
+		},
+		{
+			name:    "JSON syntax error",
+			data:    `{"name": "kaze" "count": 10}`, // 缺少逗号
+			wantErr: true,
+			errMsg:  "at offset",
+		},
+		{
+			name:    "JSON Type mismatch",
+			data:    `{"name": "kaze", "count": "not-an-int"}`,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cfg Config
+			err := StrictUnmarshalJSON([]byte(tt.data), &cfg)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("StrictUnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if tt.wantErr && tt.errMsg != "" {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("Error message '%v' does not contain '%v'", err.Error(), tt.errMsg)
+				}
+			}
+		})
+	}
+}

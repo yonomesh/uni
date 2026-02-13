@@ -1,6 +1,7 @@
 package uni
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -333,4 +334,18 @@ func ParseStructTag(tag string) (map[string]string, error) {
 		results[before] = after
 	}
 	return results, nil
+}
+
+// StrictUnmarshalJSON is like json.Unmarshal but returns an error
+// if any of the fields are unrecognized. Useful when decoding
+// module configurations, where you want to be more sure they're
+// correct.
+func StrictUnmarshalJSON(data []byte, v any) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	err := dec.Decode(v)
+	if jsonErr, ok := err.(*json.SyntaxError); ok {
+		return fmt.Errorf("%w, at offset %d", jsonErr, jsonErr.Offset)
+	}
+	return err
 }
