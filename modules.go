@@ -315,3 +315,22 @@ func getModuleNameInline(moduleNameKey string, raw json.RawMessage) (string, jso
 
 	return moduleName, result, nil
 }
+
+// ParseStructTag parses a kaze struct tag into its keys and values.
+// It is very simple. The expected syntax is:
+// `kaze:"key1=val1 key2=val2 ..."`
+func ParseStructTag(tag string) (map[string]string, error) {
+	results := make(map[string]string)
+	pairs := strings.Split(tag, " ")
+	for i, pair := range pairs {
+		if pair == "" {
+			continue
+		}
+		before, after, isCut := strings.Cut(pair, "=")
+		if !isCut {
+			return nil, fmt.Errorf("missing key in '%s' (pair %d)", pair, i)
+		}
+		results[before] = after
+	}
+	return results, nil
+}

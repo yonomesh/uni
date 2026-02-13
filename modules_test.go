@@ -629,3 +629,65 @@ func TestGetModuleNameInline(t *testing.T) {
 		})
 	}
 }
+
+// func ParseStructTag(tag string) (map[string]string, error)
+func TestParseStructTag(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected map[string]string
+		wantErr  bool
+	}{
+		{
+			name:  "two k-v",
+			input: "key1=val1 key2=val2",
+			expected: map[string]string{
+				"key1": "val1",
+				"key2": "val2",
+			},
+			wantErr: false,
+		},
+		{
+			name:  "multi-space",
+			input: "  key1=val1   key2=val2  ",
+			expected: map[string]string{
+				"key1": "val1",
+				"key2": "val2",
+			},
+			wantErr: false,
+		},
+		{
+			name:  "single k-v",
+			input: "mode=fast",
+			expected: map[string]string{
+				"mode": "fast",
+			},
+			wantErr: false,
+		},
+		{
+			name:     "missing equals sign",
+			input:    "key1=val1 invalidkey",
+			expected: nil,
+			wantErr:  true,
+		},
+		{
+			name:     "none",
+			input:    "",
+			expected: map[string]string{},
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseStructTag(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseStructTag() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.expected) {
+				t.Errorf("ParseStructTag() got = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
