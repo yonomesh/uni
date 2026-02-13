@@ -217,3 +217,14 @@ iterateModules:
 
 	return mods
 }
+
+// GetModuleName returns a module's name (the last label of its ID)
+// from an instance of its value. If the value is not a module, an
+// empty string will be returned.
+func GetModuleName(instance any) string {
+	var name string
+	if mod, ok := instance.(Module); ok {
+		name = mod.UniModule().ID.Name()
+	}
+	return name
+}

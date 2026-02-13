@@ -6,6 +6,14 @@ import (
 	"testing"
 )
 
+type testMod struct {
+	info ModuleInfo
+}
+
+func (m testMod) UniModule() ModuleInfo {
+	return m.info
+}
+
 func TestModuleInfo_String(t *testing.T) {
 	tests := []struct {
 		name string
@@ -169,13 +177,6 @@ func TestModuleID_Name(t *testing.T) {
 	}
 }
 
-type testMod struct {
-	info ModuleInfo
-}
-
-func (m testMod) UniModule() ModuleInfo {
-	return m.info
-}
 func TestRegisterModule(t *testing.T) {
 	modulesMu.Lock()
 	modules = map[string]ModuleInfo{
@@ -406,5 +407,53 @@ func TestGetModules(t *testing.T) {
 		if !reflect.DeepEqual(actual, tc.expect) {
 			t.Errorf("Test %d: Expected %v but got %v", i, tc.expect, actual)
 		}
+	}
+}
+
+func TestGetModuleName(t *testing.T) {
+	tests := []struct {
+		name     string
+		mod      testMod
+		wantName string
+	}{
+		{
+			name: "normal registration",
+			mod: testMod{
+				info: ModuleInfo{
+					ID:  "foo",
+					New: func() Module { return testMod{} },
+				},
+			},
+			wantName: "foo",
+		},
+		{
+			name: "empty ID",
+			mod: testMod{
+				info: ModuleInfo{
+					ID:  "",
+					New: func() Module { return testMod{} },
+				},
+			},
+			wantName: "",
+		},
+		{
+			name: "duplicate registration",
+			mod: testMod{
+				info: ModuleInfo{
+					ID:  "a.b.c",
+					New: func() Module { return testMod{} },
+				},
+			},
+			wantName: "c",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GetModuleName(tt.mod)
+			if got != tt.wantName {
+				t.Fatalf("want %s but got %s", tt.wantName, got)
+			}
+		})
 	}
 }
