@@ -357,3 +357,16 @@ var JSONRawMessageType = reflect.TypeFor[json.RawMessage]()
 func isJSONRawMessage(typ reflect.Type) bool {
 	return typ == JSONRawMessageType
 }
+
+// isModuleMapType returns true if the type is map[string]json.RawMessage.
+//
+// It assumes that the string key is the module name, but this is not always the case.
+//
+// To know for sure, this function must return true, but also the struct tag where this
+// type appears must NOT define an inline_key attribute, which would mean that the module
+// names appear inline with the values, not in the key.
+func isModuleMapType(typ reflect.Type) bool {
+	return typ.Kind() == reflect.Map &&
+		typ.Key().Kind() == reflect.String &&
+		isJSONRawMessage(typ.Elem())
+}

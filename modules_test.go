@@ -792,3 +792,47 @@ func TestIsJSONRawMessage(t *testing.T) {
 		})
 	}
 }
+
+func TestIsModuleMapType(t *testing.T) {
+	type (
+		ValidMap   map[string]json.RawMessage
+		InvalidKey map[int]json.RawMessage
+		InvalidVal map[string]string
+		NotAMap    string
+	)
+
+	tests := []struct {
+		name     string
+		input    reflect.Type
+		expected bool
+	}{
+		{
+			name:     "map[string]json.RawMessage",
+			input:    reflect.TypeOf(ValidMap{}),
+			expected: true,
+		},
+		{
+			name:     "map[int]json.RawMessage",
+			input:    reflect.TypeOf(InvalidKey{}),
+			expected: false,
+		},
+		{
+			name:     "map[string]string",
+			input:    reflect.TypeOf(InvalidVal{}),
+			expected: false,
+		},
+		{
+			name:     "string",
+			input:    reflect.TypeOf(NotAMap("")),
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isModuleMapType(tt.input); got != tt.expected {
+				t.Errorf("isModuleMapType() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
