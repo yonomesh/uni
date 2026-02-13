@@ -158,6 +158,22 @@ func RegisterModule(instance Module) {
 	modules[string(mi.ID)] = mi
 }
 
+// Modules returns the names of all registered modules
+// in ascending lexicographical order.
+func Modules() []string {
+	modulesMu.RLock()
+	defer modulesMu.RUnlock()
+
+	names := make([]string, 0, len(modules))
+	for name := range modules {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+
+	return names
+}
+
 // GetModule returns module information from its ID (full name).
 func GetModule(name string) (ModuleInfo, error) {
 	modulesMu.RLock()

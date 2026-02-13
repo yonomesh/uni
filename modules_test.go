@@ -1,7 +1,9 @@
 package uni
 
 import (
+	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -458,7 +460,7 @@ func TestGetModuleName(t *testing.T) {
 	}
 }
 
-func TestGetModuleIDe(t *testing.T) {
+func TestGetModuleID(t *testing.T) {
 	tests := []struct {
 		name   string
 		mod    testMod
@@ -503,5 +505,32 @@ func TestGetModuleIDe(t *testing.T) {
 				t.Fatalf("want %s but got %s", tt.wantID, got)
 			}
 		})
+	}
+}
+
+func TestModules(t *testing.T) {
+	clear(modules)
+	modulesMu.Lock()
+	modules = map[string]ModuleInfo{
+		"a":      {ID: "a"},
+		"a.b":    {ID: "a.b"},
+		"a.b.c":  {ID: "a.b.c"},
+		"a.b.cd": {ID: "a.b.cd"},
+		"a.c":    {ID: "a.c"},
+		"a.d":    {ID: "a.d"},
+		"b":      {ID: "b"},
+		"b.a":    {ID: "b.a"},
+		"b.b":    {ID: "b.b"},
+		"b.a.c":  {ID: "b.a.c"},
+		"c":      {ID: "c"},
+	}
+	modulesMu.Unlock()
+
+	want := []string{"a", "a.b", "a.b.c", "a.b.cd", "a.c", "a.d", "b", "b.a", "b.a.c", "b.b", "c"}
+
+	got := Modules()
+	fmt.Println(got)
+	if !slices.Equal(want, got) {
+		t.Fatalf("no")
 	}
 }
