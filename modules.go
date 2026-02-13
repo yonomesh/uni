@@ -228,3 +228,13 @@ func GetModuleName(instance any) string {
 	}
 	return name
 }
+
+// GetModuleID returns a module's ID from an instance of its value.
+// If the value is not a module, an empty string will be returned.
+func GetModuleID(instance any) string {
+	var id string
+	if mod, ok := instance.(Module); ok {
+		id = string(mod.UniModule().ID)
+	}
+	return id
+}

@@ -437,7 +437,7 @@ func TestGetModuleName(t *testing.T) {
 			wantName: "",
 		},
 		{
-			name: "duplicate registration",
+			name: "normal",
 			mod: testMod{
 				info: ModuleInfo{
 					ID:  "a.b.c",
@@ -453,6 +453,54 @@ func TestGetModuleName(t *testing.T) {
 			got := GetModuleName(tt.mod)
 			if got != tt.wantName {
 				t.Fatalf("want %s but got %s", tt.wantName, got)
+			}
+		})
+	}
+}
+
+func TestGetModuleIDe(t *testing.T) {
+	tests := []struct {
+		name   string
+		mod    testMod
+		wantID string
+	}{
+		{
+			name: "normal ID",
+			mod: testMod{
+				info: ModuleInfo{
+					ID:  "foo",
+					New: func() Module { return testMod{} },
+				},
+			},
+			wantID: "foo",
+		},
+		{
+			name: "empty ID",
+			mod: testMod{
+				info: ModuleInfo{
+					ID:  "",
+					New: func() Module { return testMod{} },
+				},
+			},
+			wantID: "",
+		},
+		{
+			name: "normal ID",
+			mod: testMod{
+				info: ModuleInfo{
+					ID:  "a.b.c",
+					New: func() Module { return testMod{} },
+				},
+			},
+			wantID: "a.b.c",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GetModuleID(tt.mod)
+			if got != tt.wantID {
+				t.Fatalf("want %s but got %s", tt.wantID, got)
 			}
 		})
 	}
