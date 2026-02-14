@@ -2,6 +2,7 @@ package uni
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -140,3 +141,6 @@ func (ctx Context) Modules() []Module {
 	copy(mods, ctx.ancestry)
 	return mods
 }
+
+// ErrNotConfigured indicates a module is not configured.
+var ErrNotConfigured = fmt.Errorf("module not configured")
