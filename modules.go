@@ -290,34 +290,6 @@ type CleanerUpper interface {
 	Cleanup() error
 }
 
-// getModuleNameInline loads the string value from raw of moduleNameKey,
-// where raw must be a JSON encoding of a map. It returns that value,
-// along with the result of removing that key from raw.
-func getModuleNameInline(moduleNameKey string, raw json.RawMessage) (string, json.RawMessage, error) {
-	var tmp map[string]any
-	err := json.Unmarshal(raw, &tmp)
-	if err != nil {
-		return "", nil, err
-	}
-
-	moduleName, ok := tmp[moduleNameKey].(string)
-	if !ok || moduleName == "" {
-		return "", nil, fmt.Errorf("module name not specified with key '%s' in %+v", moduleNameKey, tmp)
-	}
-
-	// remove key from the object, otherwise decoding it later
-	// will yield an error because the struct won't recognize it
-	// (this is only needed because we strictly enforce that
-	// all keys are recognized when loading modules)
-	delete(tmp, moduleNameKey)
-	result, err := json.Marshal(tmp)
-	if err != nil {
-		return "", nil, fmt.Errorf("re-encoding module configuration: %v", err)
-	}
-
-	return moduleName, result, nil
-}
-
 // ParseStructTag parses a kaze struct tag into its keys and values.
 // It is very simple. The expected syntax is:
 // `kaze:"key1=val1 key2=val2 ..."`
@@ -369,4 +341,32 @@ func isModuleMapType(typ reflect.Type) bool {
 	return typ.Kind() == reflect.Map &&
 		typ.Key().Kind() == reflect.String &&
 		isJSONRawMessage(typ.Elem())
+}
+
+// getModuleNameInline loads the string value from raw of moduleNameKey,
+// where raw must be a JSON encoding of a map. It returns that value,
+// along with the result of removing that key from raw.
+func getModuleNameInline(moduleNameKey string, raw json.RawMessage) (string, json.RawMessage, error) {
+	var tmp map[string]any
+	err := json.Unmarshal(raw, &tmp)
+	if err != nil {
+		return "", nil, err
+	}
+
+	moduleName, ok := tmp[moduleNameKey].(string)
+	if !ok || moduleName == "" {
+		return "", nil, fmt.Errorf("module name not specified with key '%s' in %+v", moduleNameKey, tmp)
+	}
+
+	// remove key from the object, otherwise decoding it later
+	// will yield an error because the struct won't recognize it
+	// (this is only needed because we strictly enforce that
+	// all keys are recognized when loading modules)
+	delete(tmp, moduleNameKey)
+	result, err := json.Marshal(tmp)
+	if err != nil {
+		return "", nil, fmt.Errorf("re-encoding module configuration: %v", err)
+	}
+
+	return moduleName, result, nil
 }
