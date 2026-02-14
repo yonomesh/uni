@@ -346,23 +346,23 @@ func isModuleMapType(typ reflect.Type) bool {
 // getModuleNameInline loads the string value from raw of moduleNameKey,
 // where raw must be a JSON encoding of a map. It returns that value,
 // along with the result of removing that key from raw.
-func getModuleNameInline(moduleNameKey string, raw json.RawMessage) (string, json.RawMessage, error) {
+func getModuleNameInline(moduleInlineKey string, raw json.RawMessage) (string, json.RawMessage, error) {
 	var tmp map[string]any
 	err := json.Unmarshal(raw, &tmp)
 	if err != nil {
 		return "", nil, err
 	}
 
-	moduleName, ok := tmp[moduleNameKey].(string)
+	moduleName, ok := tmp[moduleInlineKey].(string)
 	if !ok || moduleName == "" {
-		return "", nil, fmt.Errorf("module name not specified with key '%s' in %+v", moduleNameKey, tmp)
+		return "", nil, fmt.Errorf("module name not specified with key '%s' in %+v", moduleInlineKey, tmp)
 	}
 
 	// remove key from the object, otherwise decoding it later
 	// will yield an error because the struct won't recognize it
 	// (this is only needed because we strictly enforce that
 	// all keys are recognized when loading modules)
-	delete(tmp, moduleNameKey)
+	delete(tmp, moduleInlineKey)
 	result, err := json.Marshal(tmp)
 	if err != nil {
 		return "", nil, fmt.Errorf("re-encoding module configuration: %v", err)
