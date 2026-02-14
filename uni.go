@@ -19,7 +19,9 @@ package uni
 // care to populate the JSON-encodable fields of the struct (i.e. the fields
 // with `json` struct tags) if employing the module lifecycle (e.g. Provision
 // method calls).
-type Config struct{}
+type Config struct {
+	apps map[string]App
+}
 
 // App is a thing that Caddy runs.
 type App interface {
