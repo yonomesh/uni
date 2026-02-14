@@ -81,3 +81,62 @@ func (ctx *Context) initMetrics() {
 		globalMetrics.configSuccessTime,
 	)
 }
+
+// WithValue returns a new context with the given key-value pair.
+func (ctx *Context) WithValue(key, value any) Context {
+	return Context{
+		Context:         context.WithValue(ctx.Context, key, value),
+		moduleInstances: ctx.moduleInstances,
+		cfg:             ctx.cfg,
+		ancestry:        ctx.ancestry,
+		cleanupFuncs:    ctx.cleanupFuncs,
+		exitFuncs:       ctx.exitFuncs,
+	}
+}
+
+// OnCancel executes f when ctx is canceled.
+//
+// # TODO
+//
+// 目前的问题是 Semantic Drift
+//
+// 使用 context.AfterFunc 解决 Caddy 这种“手动维护清理列表”或“开大量协程监听取消信号”的痛点
+func (ctx *Context) OnCancel(f func()) {
+	ctx.cleanupFuncs = append(ctx.cleanupFuncs, f)
+}
+
+// OnExit executes f when the process exits gracefully.
+// The function is only executed if the process is gracefully
+// shut down while this context is active.
+//
+// EXPERIMENTAL API: subject to change or removal.
+//
+// # TODO
+//
+// 生命周期的设计应该更加现代化
+func (ctx *Context) OnExit(f func(context.Context)) {
+	ctx.exitFuncs = append(ctx.exitFuncs, f)
+}
+
+// Returns the active metrics registry for the context
+// EXPERIMENTAL: This API is subject to change.
+func (ctx *Context) GetMetricsRegistry() *prometheus.Registry {
+	return ctx.metricsRegistry
+}
+
+// Module returns the current module, or the most recent one
+// provisioned by the context.
+func (ctx Context) Module() Module {
+	if len(ctx.ancestry) == 0 {
+		return nil
+	}
+	return ctx.ancestry[len(ctx.ancestry)-1]
+}
+
+// Modules returns the lineage of modules that this context provisioned,
+// with the most recent/current module being last in the list.
+func (ctx Context) Modules() []Module {
+	mods := make([]Module, len(ctx.ancestry))
+	copy(mods, ctx.ancestry)
+	return mods
+}
