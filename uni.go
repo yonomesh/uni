@@ -20,3 +20,9 @@ package uni
 // with `json` struct tags) if employing the module lifecycle (e.g. Provision
 // method calls).
 type Config struct{}
+
+// App is a thing that Caddy runs.
+type App interface {
+	Start() error
+	Stop() error
+}
