@@ -331,6 +331,9 @@ func newDefaultProductionLog() (*defaultCustomLog, error) {
 	}, nil
 }
 
+// newDefaultProductionLogEncoder creates a zapcore.Encoder for production logs.
+// It returns a colorized console encoder if writing to a terminal (stdout/stderr),
+// otherwise it returns a JSON encoder suitable for files or non-interactive outputs.
 func newDefaultProductionLogEncoder(wf WriterProvider) zapcore.Encoder {
 	encCfg := zap.NewProductionEncoderConfig()
 	if IsWriterStandardStream(wf) && term.IsTerminal(int(os.Stderr.Fd())) {
