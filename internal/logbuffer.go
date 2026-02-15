@@ -12,9 +12,9 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// LogBufferCore is a zapcore.Core that buffers log entries in memory.
+// LogBufferCore is an in-memory zap logger that implements zapcore.Core.
 //
-// https://github.com/uber-go/zap/blob/v1.27.1/zapcore/core.go#L25
+// zapcore.Core https://github.com/uber-go/zap/blob/v1.27.1/zapcore/core.go#L25
 type LogBufferCore struct {
 	mu      sync.Mutex
 	entries []zapcore.Entry
@@ -22,14 +22,22 @@ type LogBufferCore struct {
 	level   zapcore.LevelEnabler
 }
 
+// Enabled returns true if the given log level is enabled.
+// it implements zapcore.LevelEnabler
+//
+// zapcore.LevelEnabler https://github.com/uber-go/zap/blob/v1.27.1/zapcore/level.go#L227
 func (c *LogBufferCore) Enabled(lvl zapcore.Level) bool {
 	return c.level.Enabled(lvl)
 }
 
+// With returns a Core with additional structured fields.
+// This implementation ignores the fields and returns itself.
 func (c *LogBufferCore) With(fields []zapcore.Field) zapcore.Core {
 	return c
 }
 
+// Check determines if the log entry should be logged.
+// If enabled, adds this core to the CheckedEntry.
 func (c *LogBufferCore) Check(entry zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
 	if c.Enabled(entry.Level) {
 		return ce.AddCore(entry, c)
@@ -37,6 +45,7 @@ func (c *LogBufferCore) Check(entry zapcore.Entry, ce *zapcore.CheckedEntry) *za
 	return ce
 }
 
+// Write appends the entry and fields to the internal buffer.
 func (c *LogBufferCore) Write(entry zapcore.Entry, fields []zapcore.Field) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -45,9 +54,11 @@ func (c *LogBufferCore) Write(entry zapcore.Entry, fields []zapcore.Field) error
 	return nil
 }
 
+// Sync is a no-op for the in-memory buffer.
 func (c *LogBufferCore) Sync() error { return nil }
 
-// FlushTo flushes buffered logs to the given zap.Logger.
+// FlushTo writes all buffered log entries to the given zap.Logger
+// and clears the buffer.
 func (c *LogBufferCore) FlushTo(logger *zap.Logger) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -58,11 +69,16 @@ func (c *LogBufferCore) FlushTo(logger *zap.Logger) {
 	c.fields = nil
 }
 
+// LogBufferCoreInterface is a helper interface that combines zapcore.Core
+// with the FlushTo method. It allows code to treat a core as flushable
+// without knowing the concrete type.
 type LogBufferCoreInterface interface {
 	zapcore.Core
+	// FlushTo writes all buffered log entries to the given zap.Logger.
 	FlushTo(*zap.Logger)
 }
 
+// NewLogBufferCore creates a new LogBufferCore with the specified log level.
 func NewLogBufferCore(level zapcore.LevelEnabler) *LogBufferCore {
 	return &LogBufferCore{
 		level: level,
