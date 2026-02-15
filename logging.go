@@ -70,11 +70,11 @@ type Logging struct {
 	// This ensures that open log streams can be properly closed when the
 	// log configuration is no longer needed, thereby preventing resource leaks.
 	//
-	// writerKeys a list of all keys for open writers; all writers
+	// WriterIDs a list of all IDs for open writers; all writers
 	// that are opened to provision this logging config
 	// must have their keys added to this list so they
 	// can be closed when cleaning up
-	writerKeys []string
+	WriterIDs []string
 }
 
 // SinkLog configures the default Go standard library
@@ -147,8 +147,11 @@ type BaseLog struct {
 	// Default off.
 	WithStacktrace string `json:"with_stacktrace,omitempty"`
 
-	writerOpener WriterOpener
-	writer       io.WriteCloser
+	// Factory that opens the log writer.
+	writerFactory WriterFactory
+	// Runtime writer used for log output.
+	writer io.WriteCloser
+
 	encoder      zapcore.Encoder
 	levelEnabler zapcore.LevelEnabler
 	core         zapcore.Core
@@ -158,7 +161,7 @@ func (cl *BaseLog) buildCore() {
 	// logs which only discard their output don't need
 	// to perform encoding or any other processing steps
 	// at all, so just shortcut to a nop core instead
-	if _, ok := cl.writerOpener.(*DiscardWriter); ok {
+	if _, ok := cl.writerFactory.(*DiscardWriter); ok {
 		cl.core = zapcore.NewNopCore()
 		return
 	}
@@ -178,16 +181,16 @@ func (cl *BaseLog) buildCore() {
 	cl.core = c
 }
 
-// WriterOpener is a module that can open a log writer.
-// It can return a human-readable string representation
-// of itself so that operators can understand where
-// the logs are going.
-type WriterOpener interface {
+// WriterFactory creates log writers from configuration.
+// Implementations describe the writer destination and
+// can open a runtime writer instance for log output.
+type WriterFactory interface {
+	// human-readable descriptions
 	fmt.Stringer
 
-	// WriterKey is a string that uniquely identifies this
+	// WriterID returns a string that uniquely ID this
 	// writer configuration. It is not shown to humans.
-	WriterKey() string
+	WriterID() string
 
 	// OpenWriter opens a log for writing. The writer
 	// should be safe for concurrent use but need not
@@ -197,7 +200,7 @@ type WriterOpener interface {
 
 // IsWriterStandardStream returns true if the input is a
 // writer-opener to a standard stream (stdout, stderr).
-func IsWriterStandardStream(wo WriterOpener) bool {
+func IsWriterStandardStream(wo WriterFactory) bool {
 	switch wo.(type) {
 	case StdoutWriter, StderrWriter,
 		*StdoutWriter, *StderrWriter:
@@ -281,14 +284,14 @@ func (StdoutWriter) String() string  { return "stdout" }
 func (StderrWriter) String() string  { return "stderr" }
 func (DiscardWriter) String() string { return "discard" }
 
-// WriterKey returns a unique key representing stdout.
-func (StdoutWriter) WriterKey() string { return "std:out" }
+// WriterID returns a unique ID representing stdout.
+func (StdoutWriter) WriterID() string { return "std:out" }
 
-// WriterKey returns a unique key representing stderr.
-func (StderrWriter) WriterKey() string { return "std:err" }
+// WriterID returns a unique ID representing stderr.
+func (StderrWriter) WriterID() string { return "std:err" }
 
-// WriterKey returns a unique key representing discard.
-func (DiscardWriter) WriterKey() string { return "discard" }
+// WriterID returns a unique key representing discard.
+func (DiscardWriter) WriterID() string { return "discard" }
 
 // OpenWriter returns os.Stdout that can't be closed.
 func (StdoutWriter) OpenWriter() (io.WriteCloser, error) {
@@ -317,17 +320,19 @@ type defaultCustomLog struct {
 
 // newDefaultProductionLog configures a custom log that is
 // intended for use by default if no other log is specified
-// in a config. It writes to stderr, uses the console encoder,
+// in a config.
+//
+// It writes to stderr, uses the console encoder,
 // and enables INFO-level logs and higher.
 func newDefaultProductionLog() (*defaultCustomLog, error) {
 	cl := new(CustomLog)
-	cl.writerOpener = StderrWriter{}
+	cl.writerFactory = StderrWriter{}
 	var err error
-	cl.writer, err = cl.writerOpener.OpenWriter()
+	cl.writer, err = cl.writerFactory.OpenWriter()
 	if err != nil {
 		return nil, err
 	}
-	cl.encoder = newDefaultProductionLogEncoder(cl.writerOpener)
+	cl.encoder = newDefaultProductionLogEncoder(cl.writerFactory)
 	cl.levelEnabler = zapcore.InfoLevel
 
 	cl.buildCore()
@@ -344,7 +349,7 @@ func newDefaultProductionLog() (*defaultCustomLog, error) {
 	}, nil
 }
 
-func newDefaultProductionLogEncoder(wo WriterOpener) zapcore.Encoder {
+func newDefaultProductionLogEncoder(wo WriterFactory) zapcore.Encoder {
 	encCfg := zap.NewProductionEncoderConfig()
 	if IsWriterStandardStream(wo) && term.IsTerminal(int(os.Stderr.Fd())) {
 		encCfg.EncodeTime = func(t time.Time, pae zapcore.PrimitiveArrayEncoder) {
@@ -360,6 +365,7 @@ func newDefaultProductionLogEncoder(wo WriterOpener) zapcore.Encoder {
 
 // BufferedLog sets the default logger to one that buffers
 // logs before a config is loaded.
+//
 // Returns the buffered logger, the original default logger
 // (for flushing on errors), and the buffer core so that the
 // caller can flush the logs after the config is loaded or
