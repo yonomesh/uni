@@ -2,7 +2,10 @@ module github.com/yonomesh/uni
 
 go 1.25.6
 
-require github.com/prometheus/client_golang v1.23.2
+require (
+	github.com/prometheus/client_golang v1.23.2
+	github.com/yonomesh/uuid v0.0.0-20260214183854-2d9fc61ca336
+)
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
