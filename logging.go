@@ -147,9 +147,9 @@ type BaseLog struct {
 	// Default off.
 	WithStacktrace string `json:"with_stacktrace,omitempty"`
 
-	// Factory that opens the log writer.
-	writerFactory WriterFactory
-	// Runtime writer used for log output.
+	// Provider responsible for creating the log writer instance.
+	writerProvider WriterProvider
+	// Active writer used to record log output at runtime.
 	writer io.WriteCloser
 
 	encoder      zapcore.Encoder
@@ -161,7 +161,7 @@ func (cl *BaseLog) buildCore() {
 	// logs which only discard their output don't need
 	// to perform encoding or any other processing steps
 	// at all, so just shortcut to a nop core instead
-	if _, ok := cl.writerFactory.(*DiscardWriter); ok {
+	if _, ok := cl.writerProvider.(*DiscardWriter); ok {
 		cl.core = zapcore.NewNopCore()
 		return
 	}
@@ -181,10 +181,10 @@ func (cl *BaseLog) buildCore() {
 	cl.core = c
 }
 
-// WriterFactory creates log writers from configuration.
+// WriterProvider creates log writers from configuration.
 // Implementations describe the writer destination and
 // can open a runtime writer instance for log output.
-type WriterFactory interface {
+type WriterProvider interface {
 	// human-readable descriptions
 	fmt.Stringer
 
@@ -200,8 +200,8 @@ type WriterFactory interface {
 
 // IsWriterStandardStream returns true if the input is a
 // writer-opener to a standard stream (stdout, stderr).
-func IsWriterStandardStream(wo WriterFactory) bool {
-	switch wo.(type) {
+func IsWriterStandardStream(wf WriterProvider) bool {
+	switch wf.(type) {
 	case StdoutWriter, StderrWriter,
 		*StdoutWriter, *StderrWriter:
 		return true
@@ -326,13 +326,13 @@ type defaultCustomLog struct {
 // and enables INFO-level logs and higher.
 func newDefaultProductionLog() (*defaultCustomLog, error) {
 	cl := new(CustomLog)
-	cl.writerFactory = StderrWriter{}
+	cl.writerProvider = StderrWriter{}
 	var err error
-	cl.writer, err = cl.writerFactory.OpenWriter()
+	cl.writer, err = cl.writerProvider.OpenWriter()
 	if err != nil {
 		return nil, err
 	}
-	cl.encoder = newDefaultProductionLogEncoder(cl.writerFactory)
+	cl.encoder = newDefaultProductionLogEncoder(cl.writerProvider)
 	cl.levelEnabler = zapcore.InfoLevel
 
 	cl.buildCore()
@@ -349,9 +349,9 @@ func newDefaultProductionLog() (*defaultCustomLog, error) {
 	}, nil
 }
 
-func newDefaultProductionLogEncoder(wo WriterFactory) zapcore.Encoder {
+func newDefaultProductionLogEncoder(wf WriterProvider) zapcore.Encoder {
 	encCfg := zap.NewProductionEncoderConfig()
-	if IsWriterStandardStream(wo) && term.IsTerminal(int(os.Stderr.Fd())) {
+	if IsWriterStandardStream(wf) && term.IsTerminal(int(os.Stderr.Fd())) {
 		encCfg.EncodeTime = func(t time.Time, pae zapcore.PrimitiveArrayEncoder) {
 			pae.AppendString(t.UTC().Format("2006/01/02 15:04:05.000"))
 		}
