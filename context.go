@@ -195,23 +195,23 @@ var ErrNotConfigured = fmt.Errorf("module not configured")
 // Loaded modules have already been provisioned and validated. Upon returning
 // successfully, this method clears the json.RawMessage(s) in the field since
 // the raw JSON is no longer needed, and this allows the GC to free up memory.
-func (ctx Context) LoadModule(structPointer any, fieldName string) (any, error) {
-	val := reflect.ValueOf(structPointer).Elem().FieldByName(fieldName)
+func (ctx Context) LoadModule(structPointer any, structFieldName string) (any, error) {
+	val := reflect.ValueOf(structPointer).Elem().FieldByName(structFieldName)
 	typ := val.Type()
 
-	field, ok := reflect.TypeOf(structPointer).Elem().FieldByName(fieldName)
+	field, ok := reflect.TypeOf(structPointer).Elem().FieldByName(structFieldName)
 	if !ok {
-		panic(fmt.Sprintf("field %s does not exist in %#v", fieldName, structPointer))
+		panic(fmt.Sprintf("field %s does not exist in %#v", structFieldName, structPointer))
 	}
 
 	opts, err := ParseStructTag(field.Tag.Get("caddy"))
 	if err != nil {
-		panic(fmt.Sprintf("malformed tag on field %s: %v", fieldName, err))
+		panic(fmt.Sprintf("malformed tag on field %s: %v", structFieldName, err))
 	}
 
 	moduleNamespace, ok := opts["namespace"]
 	if !ok {
-		panic(fmt.Sprintf("missing 'namespace' key in struct tag on field %s", fieldName))
+		panic(fmt.Sprintf("missing 'namespace' key in struct tag on field %s", structFieldName))
 	}
 	inlineModuleKey := opts["inline_key"]
 

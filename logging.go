@@ -199,9 +199,9 @@ type WriterProvider interface {
 }
 
 // IsWriterStandardStream returns true if the input is a
-// writer-opener to a standard stream (stdout, stderr).
-func IsWriterStandardStream(wf WriterProvider) bool {
-	switch wf.(type) {
+// writer-provider to a standard stream (stdout, stderr).
+func IsWriterStandardStream(wp WriterProvider) bool {
+	switch wp.(type) {
 	case StdoutWriter, StderrWriter,
 		*StdoutWriter, *StderrWriter:
 		return true
