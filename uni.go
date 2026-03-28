@@ -67,3 +67,6 @@ type Event struct {
 	name   string
 	origin Module
 }
+
+// CtxKey is a value type for use with context.WithValue.
+type CtxKey string
