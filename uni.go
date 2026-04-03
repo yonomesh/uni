@@ -1,9 +1,11 @@
 package uni
 
 import (
+	"context"
 	"time"
 
 	"github.com/yonomesh/uuid"
+	"go.uber.org/zap"
 )
 
 // Config is the top (or beginning) of the Uni configuration structure.
@@ -68,5 +70,20 @@ type Event struct {
 	origin Module
 }
 
+// TODO
+// exitProcess exits the process as gracefully as possible,
+// but it always exits, even if there are errors doing so.
+// It stops all apps, cleans up external locks, removes any
+// PID file, and shuts down admin endpoint(s) in a goroutine.
+// Errors are logged along the way, and an appropriate exit
+// code is emitted.
+func exitProcess(ctx context.Context, logger *zap.Logger) {}
+
 // CtxKey is a value type for use with context.WithValue.
 type CtxKey string
+
+var CustomVersion string = "v0.0.0"
+
+func Version() (simple, full string) {
+	return "v0.0.1", "v0.0.1"
+}
