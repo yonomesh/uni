@@ -1,6 +1,7 @@
 package unicmd
 
 import (
+	"maps"
 	"sync"
 
 	"github.com/spf13/cobra"
@@ -71,13 +72,9 @@ func (factory *RootCmdFactory) RegisterCommand(cmd Command) {
 	factory.commands[cmd.Name] = cmd
 }
 
-func (f *RootCmdFactory) Commands() []Command {
+func (f *RootCmdFactory) Commands() map[string]Command {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
 
-	cmds := make([]Command, 0, len(f.commands))
-	for _, cmd := range f.commands {
-		cmds = append(cmds, cmd)
-	}
-	return cmds
+	return maps.Clone(f.commands)
 }
